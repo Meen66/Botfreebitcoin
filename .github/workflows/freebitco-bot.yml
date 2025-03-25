@@ -1,0 +1,57 @@
+name: FreeBitco.in Bot
+
+# Run every 4 hours
+on:
+  schedule:
+    - cron: "0 */4 * * *"  # Runs at 00:00, 04:00, 08:00, 12:00, 16:00, 20:00
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      # Set up Chrome
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: 'latest'
+
+      # Set up Chromedriver
+      - name: Set up Chromedriver
+        uses: nanasess/setup-chromedriver@v2
+
+      # Install Python dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Run the bot
+      - name: Run FreeBitco.in Bot
+        env:
+          FREEBITCO_EMAIL: ${{ secrets.FREEBITCO_EMAIL }}
+          FREEBITCO_PASSWORD: ${{ secrets.FREEBITCO_PASSWORD }}
+          PROXY: ${{ secrets.PROXY }}
+        run: python main.py
+
+      # Notify on failure (optional)
+      - name: Notify on Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: "#alerts"
+          text: "FreeBitco.in Bot failed! Check the logs."
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
