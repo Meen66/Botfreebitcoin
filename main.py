@@ -11,24 +11,26 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 import time
 import random
-from getpass import getpass
-from flask import Flask
-from threading import Thread
+import os
 
-# Set up Flask for Keep Alive (to prevent Replit from stopping)
-app = Flask(__name__)
+# Get credentials from environment variables (set in GitHub Secrets)
+email = os.getenv("FREEBITCO_EMAIL")
+password = os.getenv("FREEBITCO_PASSWORD")
+proxy = os.getenv("PROXY")  # Optional: Format: http://username:password@host:port
 
-@app.route('/')
-def home():
-    return "FreeBitco.in Bot is running!"
+if not email or not password:
+    print("Error: FREEBITCO_EMAIL or FREEBITCO_PASSWORD not set in environment variables.")
+    exit()
 
-# Configure Chrome Options for Replit or local environment
+# Configure Chrome Options for GitHub Actions
 chrome_options = Options()
-chrome_options.add_argument("--headless")  # Run in headless mode
+chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--disable-extensions")
+if proxy:
+    chrome_options.add_argument(f'--proxy-server={proxy}')
 
 # Initialize WebDriver
 try:
@@ -40,7 +42,7 @@ except Exception as e:
     exit()
 
 # Function to automate FreeBitco.in ROLL
-def auto_roll_freebitco(email, password):
+def auto_roll_freebitco():
     print("Starting FreeBitco.in bot...")
     try:
         driver.get("https://freebitco.in")
@@ -60,8 +62,8 @@ def auto_roll_freebitco(email, password):
         print(f"Login failed: {e}")
         return
 
-    # Loop to click ROLL button every hour
-    while True:
+    # Click ROLL button 4 times (4 hours)
+    for _ in range(4):
         try:
             roll_button = driver.find_element(By.ID, "free_play_form_button")
             roll_button.click()
@@ -70,16 +72,9 @@ def auto_roll_freebitco(email, password):
             time.sleep(wait_time)
         except Exception as e:
             print(f"Error during ROLL: {e}")
-            time.sleep(60)  # Retry after 1 minute if error occurs
+            time.sleep(60)
 
-# Get user credentials securely
-email = input("Enter your FreeBitco.in email: ")
-password = getpass("Enter your password (hidden): ")
-
-# Run the bot in a separate thread and start Flask
+# Run the bot
 if __name__ == "__main__":
-    Thread(target=auto_roll_freebitco, args=(email, password)).start()
-    app.run(host='0.0.0.0', port=8080)
-
-# Uncomment to close driver (not recommended for continuous running)
-# driver.quit()
+    auto_roll_freebitco()
+    driver.quit()
